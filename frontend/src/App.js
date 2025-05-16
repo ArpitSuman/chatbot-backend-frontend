@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import "./App.css";
-
+const backendUrl = process.env.REACT_APP_BACKEND_URL;
 function App() {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
 
   const sendMessage = async () => {
-    const response = await fetch("https://<your-heroku-backend>.herokuapp.com/chat", {
+    const response = await fetch(`${backendUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
