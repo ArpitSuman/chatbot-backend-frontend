@@ -25,13 +25,31 @@ def chat():
 
     try:
         response = requests.post(HF_URL, headers=headers, json=payload)
-        result = response.json()
 
-        # Extract response text
+        # Try to parse JSON
+        try:
+            result = response.json()
+        except ValueError:
+            return jsonify({
+                "error": "Model returned invalid JSON or timed out.",
+                "raw_response": response.text,
+                "status_code": response.status_code
+            }), 500
+
+        # Check for structured error
+        if isinstance(result, dict) and "error" in result:
+            return jsonify({"error": result["error"]}), 500
+
+        # Extract generated text
         if isinstance(result, list) and "generated_text" in result[0]:
-            return jsonify({"reply": result[0]["generated_text"].split("[/INST]")[-1].strip()})
-        else:
-            return jsonify({"error": "Invalid response from model", "details": result})
+            reply = result[0]["generated_text"].split("[/INST]")[-1].strip()
+            return jsonify({"reply": reply})
+
+        return jsonify({
+            "error": "Unexpected format in Hugging Face response.",
+            "response": result
+        }), 500
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
