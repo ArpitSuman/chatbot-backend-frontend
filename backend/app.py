@@ -10,6 +10,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    print("API Key:", openai.api_key)  
     data = request.get_json()
     user_message = data.get("message")
 

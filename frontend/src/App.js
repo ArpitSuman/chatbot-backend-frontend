@@ -6,6 +6,7 @@ function App() {
   const [chat, setChat] = useState([]);
 
   const sendMessage = async () => {
+    console.log("Backend URL:", backendUrl);
     const response = await fetch(`${backendUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
