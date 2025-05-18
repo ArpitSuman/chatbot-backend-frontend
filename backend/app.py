@@ -33,8 +33,7 @@ def chat():
             return jsonify({
                 "error": "Model returned invalid JSON or timed out.",
                 "raw_response": response.text,
-                "status_code": response.status_code,
-                "response": response
+                "status_code": response.status_code
             }), 500
 
         # Check for structured error
