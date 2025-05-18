@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import os
 import requests
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # Needed for session
 CORS(app)
 
 HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
@@ -14,49 +15,63 @@ headers = {
 
 HF_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
+def build_prompt(history):
+    system_prompt = "You are a helpful assistant that answers clearly and concisely."
+
+    prompt = "<s>[INST] <<SYS>>\n" + system_prompt + "\n<</SYS>>\n"
+
+    for turn in history:
+        if turn["role"] == "user":
+            prompt += turn["content"] + "\n"
+        elif turn["role"] == "assistant":
+            prompt += turn["content"] + "\n"
+
+    prompt += "[/INST]"
+    return prompt
+
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
-    user_input = data.get("message")
+    user_input = request.get_json().get("message")
 
-    payload = {
-        "inputs": f"<s>[INST] You are a helpful assistant. Answer the question concisely.\n{user_input} [/INST]"
-    }
+    # Load or initialize chat history
+    if "history" not in session:
+        session["history"] = []
 
+    # Add the new user message
+    session["history"].append({"role": "user", "content": user_input})
+
+    # Build prompt from history
+    prompt = build_prompt(session["history"])
+
+    payload = { "inputs": prompt }
 
     try:
-        response = requests.post(HF_URL, headers=headers, json=payload)
+        response = requests.post(HF_URL, headers=headers, json=payload, timeout=60)
+        result = response.json()
 
-        # Try to parse JSON
-        try:
-            result = response.json()
-        except ValueError:
-            return jsonify({
-                "error": "Model returned invalid JSON or timed out.",
-                "raw_response": response.text,
-                "status_code": response.status_code
-            }), 500
-
-        # Check for structured error
-        if isinstance(result, dict) and "error" in result:
-            return jsonify({"error": result["error"]}), 500
-
-        # Extract generated text
         if isinstance(result, list) and "generated_text" in result[0]:
-            reply = result[0]["generated_text"].split("[/INST]")[-1].strip()
-            return jsonify({"reply": reply})
+            full_output = result[0]["generated_text"]
+            reply = full_output.split("[/INST]")[-1].strip()
 
-        return jsonify({
-            "error": "Unexpected format in Hugging Face response.",
-            "response": result
-        }), 500
+            # Save assistant reply to session history
+            session["history"].append({"role": "assistant", "content": reply})
+            session.modified = True
+
+            return jsonify({ "reply": reply })
+
+        return jsonify({ "error": "Unexpected response", "details": result }), 500
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({ "error": str(e) }), 500
+
+@app.route("/reset", methods=["POST"])
+def reset():
+    session.pop("history", None)
+    return jsonify({ "message": "Chat history cleared." })
 
 @app.route("/")
 def home():
-    return "Hugging Face Chatbot API is running!"
+    return "Zephyr Chatbot is running!"
 
 if __name__ == "__main__":
     app.run(debug=True)
