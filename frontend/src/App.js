@@ -33,7 +33,8 @@ function App() {
       setChat((prev) => [
         ...prev,
         { user: message, bot: data.reply || data.error || "Error from bot." },
-      ]);
+    ]);
+
     } catch (err) {
       setChat((prev) => [
         ...prev,

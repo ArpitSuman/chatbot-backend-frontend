@@ -16,18 +16,17 @@ headers = {
 HF_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
 def build_prompt(history):
-    system_prompt = "You are a helpful assistant that answers clearly and concisely."
+    system_prompt = "You are a helpful assistant."
 
-    prompt = "<s>[INST] <<SYS>>\n" + system_prompt + "\n<</SYS>>\n"
+    formatted = f"<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n"
 
     for turn in history:
         if turn["role"] == "user":
-            prompt += turn["content"] + "\n"
+            formatted += f"{turn['content']} [/INST]\n"
         elif turn["role"] == "assistant":
-            prompt += turn["content"] + "\n"
+            formatted += f"{turn['content']} </s><s>[INST] "
 
-    prompt += "[/INST]"
-    return prompt
+    return formatted.strip()
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -46,6 +45,9 @@ def chat():
     payload = { "inputs": prompt }
 
     try:
+        if len(prompt) > 4000:
+            return jsonify({"error": "Prompt too long, please reset the chat."}), 400
+
         response = requests.post(HF_URL, headers=headers, json=payload, timeout=60)
         result = response.json()
 
