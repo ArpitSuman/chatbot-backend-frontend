@@ -20,8 +20,9 @@ def chat():
     user_input = data.get("message")
 
     payload = {
-        "inputs": f"<s>[INST] {user_input} [/INST]"
+        "inputs": f"<s>[INST] You are a helpful assistant. Answer the question concisely.\n{user_input} [/INST]"
     }
+
 
     try:
         response = requests.post(HF_URL, headers=headers, json=payload)
