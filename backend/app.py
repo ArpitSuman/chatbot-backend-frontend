@@ -12,7 +12,7 @@ headers = {
     "Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"
 }
 
-HF_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+HF_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
 @app.route("/chat", methods=["POST"])
 def chat():
